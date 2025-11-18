@@ -11,6 +11,44 @@ import moderngl
 from src.game import Snake
 from src.renderer import Renderer
 
+# -----------------------
+# JOYSTICK CONFIG / GLOBALS
+# -----------------------
+JOOYSTICKS = [] 
+AXIS_DEADZONE = 0.5   # Threshold for analog sticks to register movement
+BUTTON_ENTER = 0      # Commonly 'A' or 'X' button
+BUTTON_BACK = 1       # Commonly 'B' or 'Circle' button (Mapped to PAUSE/ESC)
+BUTTON_PAUSE = 7      # Commonly the 'Start' or 'Menu' button
+
+
+def initialize_joysticks():
+    """Initializes the joystick module and detects connected controllers."""
+    global JOOYSTICKS
+    
+    try:
+        # Check if the module is initialized before calling init again
+        if not pygame.joystick.get_init():
+             pygame.joystick.init()
+             
+        # Clear the current list and re-detect
+        JOOYSTICKS = []
+        
+        count = pygame.joystick.get_count()
+        print(f"Joystick module initialized. Found {count} controllers.")
+        
+        for i in range(count):
+            try:
+                joystick = pygame.joystick.Joystick(i)
+                joystick.init()
+                JOOYSTICKS.append(joystick)
+                print(f"Initialized controller: {joystick.get_name()}")
+            except pygame.error as e:
+                print(f"Error initializing joystick {i}: {e}")
+            
+    except pygame.error as e:
+        print(f"Warning: Could not initialize joystick module: {e}")
+
+
 # Config
 WINDOW_WIDTH, WINDOW_HEIGHT = 1920, 1080
 GRID_W, GRID_H = 24, 24
@@ -18,6 +56,7 @@ CELL_PADDING = 0.05
 TICK = 0.16
 
 pygame.init()
+initialize_joysticks() # --- NEW: Initialize joysticks right after Pygame init
 
 try:
     pygame.mixer.init()
@@ -58,7 +97,7 @@ bg_music_path = _base_path / "src" / "audio" / "background-music.mp3"
 screen = pygame.display.set_mode(
     (WINDOW_WIDTH, WINDOW_HEIGHT), pygame.OPENGL | pygame.DOUBLEBUF
 )
-pygame.display.set_caption("Snake Shader v1.0.0")
+pygame.display.set_caption("Snake Shader v1.1.0")
 ctx = moderngl.create_context()
 ctx.enable(moderngl.BLEND)
 ctx.blend_func = (moderngl.SRC_ALPHA, moderngl.ONE_MINUS_SRC_ALPHA)
@@ -70,13 +109,19 @@ snake = Snake(GRID_W, GRID_H)
 preview_snake = Snake(GRID_W, GRID_H)
 
 global acc, is_transitioning
+global last_input_action
+global debug_mode
 clock = pygame.time.Clock()
 acc = 0.0
 running = True
 is_transitioning = False
+
 # UI / state
 state = "menu"  # menu, settings, playing, gameover
 fullscreen = False
+debug_mode = False
+last_input_action = "None"
+
 
 # -----------------------
 # SETTINGS + PERSISTENCE
@@ -271,15 +316,92 @@ while running:
     if chroma_timer > 0:
         chroma_timer -= dt
 
-    # input
+    # ----------------------------------------------------
+    # INPUT HANDLING
+    # ----------------------------------------------------
     for ev in pygame.event.get():
         if ev.type == pygame.QUIT:
             save_settings(settings)
             running = False
 
+        # Joystick Hotplugging (re-initialize if a controller is added/removed)
+        if ev.type == pygame.JOYDEVICEADDED or ev.type == pygame.JOYDEVICEREMOVED:
+            initialize_joysticks()
+            
+        # Initialize action type for combined keyboard/joystick logic
+        action = None
+        
+        # ----------------------------------------------------
+        # 1. Keyboard Input: Map key code to action string
+        # ----------------------------------------------------
         if ev.type == pygame.KEYDOWN:
-            # universal escape
-            if ev.key == pygame.K_ESCAPE and state != "playing":
+            # Toggle debug overlay
+            if ev.key == pygame.K_d:
+                debug_mode = not debug_mode
+
+            if ev.key == pygame.K_UP: 
+                action = "UP"
+            elif ev.key == pygame.K_DOWN: 
+                action = "DOWN"
+            elif ev.key == pygame.K_LEFT: 
+                action = "LEFT"
+            elif ev.key == pygame.K_RIGHT: 
+                action = "RIGHT"
+            elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER): 
+                action = "ENTER"
+            elif ev.key == pygame.K_ESCAPE: 
+                action = "PAUSE" # Use PAUSE for ESC functionality
+            elif ev.key == pygame.K_r: 
+                action = "RETRY"
+            elif ev.key == pygame.K_m: 
+                action = "MENU_QUIT"
+
+        # ----------------------------------------------------
+        # 2. Controller Input: Map joystick events to action string
+        # ----------------------------------------------------
+        elif ev.type == pygame.JOYAXISMOTION:
+            if ev.instance_id < len(JOOYSTICKS): 
+                if ev.axis == 0: # X-Axis
+                    if ev.value < -AXIS_DEADZONE: 
+                        action = "LEFT"
+                    elif ev.value > AXIS_DEADZONE: 
+                        action = "RIGHT"
+                elif ev.axis == 1: # Y-Axis
+                    if ev.value < -AXIS_DEADZONE: 
+                        action = "UP"
+                    elif ev.value > AXIS_DEADZONE: 
+                        action = "DOWN"
+        
+        elif ev.type == pygame.JOYHATMOTION:
+             if ev.hat == 0:
+                 x, y = ev.value
+                 if x == -1: 
+                     action = "LEFT"
+                 elif x == 1: 
+                     action = "RIGHT"
+                 elif y == -1: 
+                     action = "DOWN"
+                 elif y == 1: 
+                     action = "UP"
+
+        elif ev.type == pygame.JOYBUTTONDOWN:
+            if ev.button == BUTTON_ENTER: 
+                action = "ENTER"
+            elif ev.button == BUTTON_BACK: 
+                action = "PAUSE" # Circle/B button for back
+            elif ev.button == BUTTON_PAUSE: 
+                action = "PAUSE"
+            
+        # ----------------------------------------------------
+        # 3. Process the universal action
+        # ----------------------------------------------------
+        if action:
+            # Update the debug display variable
+            last_input_action = action
+            
+            # universal escape / pause logic
+            # This handles ESCAPE/PAUSE/BACK buttons returning to menu from Settings/Game Over
+            if action == "PAUSE" and state != "playing":
                 if state == "settings":
                     state = "menu"
                 elif state == "gameover":
@@ -289,15 +411,15 @@ while running:
             # MAIN MENU INPUT
             # -----------------
             if state == "menu":
-                if ev.key == pygame.K_UP:
+                if action == "UP":
                     menu_index = (menu_index - 1) % len(menu_items)
                     if snd_select:
                         snd_select.play()
-                elif ev.key == pygame.K_DOWN:
+                elif action == "DOWN":
                     menu_index = (menu_index + 1) % len(menu_items)
                     if snd_select:
                         snd_select.play()
-                elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
+                elif action == "ENTER":
                     choice = menu_items[menu_index]
 
                     if choice == "Start Game":
@@ -327,30 +449,41 @@ while running:
             # SETTINGS INPUT
             # -----------------
             elif state == "settings":
-                if ev.key == pygame.K_UP:
+                if action == "UP":
                     settings_index = (settings_index - 1) % len(settings_items)
                     if snd_select:
                         snd_select.play()
-                elif ev.key == pygame.K_DOWN:
+                elif action == "DOWN":
                     settings_index = (settings_index + 1) % len(settings_items)
                     if snd_select:
                         snd_select.play()
-                elif ev.key in (pygame.K_LEFT, pygame.K_RIGHT, pygame.K_RETURN):
+                elif action in ("LEFT", "RIGHT", "ENTER"):
                     key, _ = settings_items[settings_index]
-
-                    if key == "color_theme":
+                    
+                    # For toggles, LEFT/RIGHT/ENTER all act as a toggle
+                    if key in ("vsync", "bloom", "use_kawase", "shake_on_death", "fullscreen", "chroma_enabled") and action == "ENTER":
+                        settings[key] = not settings[key]
+                        if key in ("vsync", "fullscreen"):
+                            apply_display_mode(
+                                settings["resolution"],
+                                settings["fullscreen"],
+                                settings["vsync"],
+                            )
+                        save_settings(settings)
+                        
+                    elif key == "color_theme":
                         current_index = THEME_NAMES.index(settings[key])
-                        if ev.key == pygame.K_LEFT:
+                        if action == "LEFT":
                             new_index = (current_index - 1) % len(THEME_NAMES)
-                        else:
+                        else: # RIGHT or ENTER
                             new_index = (current_index + 1) % len(THEME_NAMES)
                         settings[key] = THEME_NAMES[new_index]
                         save_settings(settings)
 
                     elif key == "resolution":
-                        if ev.key == pygame.K_LEFT:
+                        if action == "LEFT":
                             resolution_index = (resolution_index - 1) % len(RESOLUTIONS)
-                        else:
+                        else: # RIGHT or ENTER
                             resolution_index = (resolution_index + 1) % len(RESOLUTIONS)
                         new_res = RESOLUTIONS[resolution_index]
                         settings["resolution"] = new_res
@@ -372,63 +505,55 @@ while running:
                             step = 0.05
 
                         cur = settings[key]
-                        if ev.key == pygame.K_LEFT:
+                        if action == "LEFT":
                             settings[key] = max(0.0, cur - step)
-                        elif ev.key == pygame.K_RIGHT:
+                        elif action == "RIGHT":
                             settings[key] = min(
                                 2.0, cur + step
                             )  # clamp to 2.0 for biases
-                        else:
+                        elif action == "ENTER": # Reset to default on ENTER
                             settings[key] = DEFAULT_SETTINGS[key]
                         save_settings(settings)
 
-                    else:
-                        settings[key] = not settings[key]
-                        if key == "vsync" or key == "fullscreen":
-                            apply_display_mode(
-                                settings["resolution"],
-                                settings["fullscreen"],
-                                settings["vsync"],
-                            )
-                        save_settings(settings)
 
             # -----------------
             # PLAYING INPUT
             # -----------------
             elif state == "playing":
-                if ev.key == pygame.K_UP:
+                if action == "UP":
                     snake.change_dir((0, -1))
-                elif ev.key == pygame.K_DOWN:
+                elif action == "DOWN":
                     snake.change_dir((0, 1))
-                elif ev.key == pygame.K_LEFT:
+                elif action == "LEFT":
                     snake.change_dir((-1, 0))
-                elif ev.key == pygame.K_RIGHT:
+                elif action == "RIGHT":
                     snake.change_dir((1, 0))
-                elif ev.key == pygame.K_ESCAPE:
-                    state = "menu"
+                elif action == "PAUSE":
+                    state = "menu" # ESC/PAUSE/BACK button leads to menu
 
             # -----------------
             # GAME OVER INPUT
             # -----------------
             elif state == "gameover":
-                if ev.key == pygame.K_r:
+                if action == "RETRY" or action == "ENTER":
                     snake.reset()
                     acc = 0.0
                     is_transitioning = True
                     state = "playing"
-                elif ev.key == pygame.K_m:
+                elif action == "MENU_QUIT" or action == "PAUSE":
                     snake.reset()
                     state = "menu"
             # -----------------
             # WIN INPUT
             # -----------------
             elif state == "win":
-                if ev.key == pygame.K_r:
+                if action == "RETRY" or action == "ENTER":
                     snake.reset()
                     state = "playing"
-                elif ev.key == pygame.K_m:
+                elif action == "MENU_QUIT" or action == "PAUSE":
                     snake.reset()
                     state = "menu"
+
 
     # -----------------------
     # PREVIEW SNAKE LOGIC + AI MOVEMENT TOWARDS APPLE
@@ -674,6 +799,35 @@ while running:
                 "R = Restart | M = Menu", 28, pos=(240, 330), color=(255, 255, 255)
             )
 
+    # -----------------------
+    # DEBUG OVERLAY RENDER (NEW)
+    # -----------------------
+    if debug_mode:
+        debug_size = 20
+        pos_x = 20
+        # Position in the bottom left
+        pos_y = screen_h - 40 
+        
+        # Display current game state
+        mode_text = f"MODE: {state.upper()}"
+        renderer.draw_text(
+            mode_text,
+            debug_size,
+            color=(255, 255, 255),
+            pos=(pos_x, pos_y - 25)
+        )
+
+        # Display last action
+        debug_text = f"LAST ACTION: {last_input_action}"
+        renderer.draw_text(
+            debug_text,
+            debug_size,
+            color=(255, 255, 255),
+            pos=(pos_x, pos_y)
+        )
+        
+    # ---------------------------------
+    
     # -----------------------
     # BLOOM + PRESENT
     # -----------------------

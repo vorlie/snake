@@ -82,12 +82,13 @@ To run Snake Shader, you need Python and the required libraries (Pygame, ModernG
 
 | Action | Key(s) | Notes | 
  | ----- | ----- | ----- | 
-| **Movement** | `ARROW KEYS` | Standard up, down, left, right movement. | 
-| **Menu Select/Action** | `ENTER` / `KP_ENTER` | Confirm menu selection or change settings values. | 
-| **Menu Navigation** | `UP` / `DOWN` | Navigate through menu and settings options. | 
-| **Settings Adjust** | `LEFT` / `RIGHT` | Change values for theme, resolution, and effect settings. | 
-| **Pause/Menu** | `ESC` | Exit game state back to the main menu. | 
+| **Movement** | `ARROW KEYS` / `Analog Stick` / `D-Pad` | Standard up, down, left, right movement. | 
+| **Menu Select/Action** | `ENTER` / `A (Xbox)` / `X (PS)` | Confirm menu selection or change settings values. | 
+| **Menu Navigation** | `UP` / `DOWN` / `Analog Stick` / `D-Pad` | Navigate through menu and settings options. | 
+| **Settings Adjust** | `LEFT` / `RIGHT` / `Analog Stick` / `D-Pad` | Change values for theme, resolution, and effect settings. | 
+| **Pause/Menu** | `ESC`  / `B/Menu (Xbox)` / `O/Options (PS)` | Exit game state back to the main menu. | 
 | **Retry (Game Over)** | `R` | Quickly restart the game after death. | 
+| **Toggle Debug Overlay** | `D` | Show/Hide input and state debug information in the bottom left. |
 
 ## ⚙️ Configuration & Settings Table Markdown
 
