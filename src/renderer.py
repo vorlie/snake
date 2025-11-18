@@ -22,8 +22,10 @@ class Renderer:
         self.screen_size = screen_size
 
         shader_dir = Path(__file__).resolve().parent / "shaders"
-        fonts_dir = Path(__file__).resolve().parent / "fonts"
-        self.custom_font_path = fonts_dir / "PixelifySans-Regular.ttf"
+        renderer_dir = Path(__file__).resolve().parent
+        fonts_dir = renderer_dir / "fonts"
+        custom_font_path_obj = fonts_dir / "font.ttf"
+        self.custom_font_path = custom_font_path_obj
 
         if not self.custom_font_path.exists():
             print(
