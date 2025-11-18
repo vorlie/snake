@@ -14,28 +14,28 @@ from src.renderer import Renderer
 # -----------------------
 # JOYSTICK CONFIG / GLOBALS
 # -----------------------
-JOOYSTICKS = [] 
-AXIS_DEADZONE = 0.5   # Threshold for analog sticks to register movement
-BUTTON_ENTER = 0      # Commonly 'A' or 'X' button
-BUTTON_BACK = 1       # Commonly 'B' or 'Circle' button (Mapped to PAUSE/ESC)
-BUTTON_PAUSE = 7      # Commonly the 'Start' or 'Menu' button
+JOOYSTICKS = []
+AXIS_DEADZONE = 0.5  # Threshold for analog sticks to register movement
+BUTTON_ENTER = 0  # Commonly 'A' or 'X' button
+BUTTON_BACK = 1  # Commonly 'B' or 'Circle' button (Mapped to PAUSE/ESC)
+BUTTON_PAUSE = 7  # Commonly the 'Start' or 'Menu' button
 
 
 def initialize_joysticks():
     """Initializes the joystick module and detects connected controllers."""
     global JOOYSTICKS
-    
+
     try:
         # Check if the module is initialized before calling init again
         if not pygame.joystick.get_init():
-             pygame.joystick.init()
-             
+            pygame.joystick.init()
+
         # Clear the current list and re-detect
         JOOYSTICKS = []
-        
+
         count = pygame.joystick.get_count()
         print(f"Joystick module initialized. Found {count} controllers.")
-        
+
         for i in range(count):
             try:
                 joystick = pygame.joystick.Joystick(i)
@@ -44,7 +44,7 @@ def initialize_joysticks():
                 print(f"Initialized controller: {joystick.get_name()}")
             except pygame.error as e:
                 print(f"Error initializing joystick {i}: {e}")
-            
+
     except pygame.error as e:
         print(f"Warning: Could not initialize joystick module: {e}")
 
@@ -56,7 +56,7 @@ CELL_PADDING = 0.05
 TICK = 0.16
 
 pygame.init()
-initialize_joysticks() # --- NEW: Initialize joysticks right after Pygame init
+initialize_joysticks()  # --- NEW: Initialize joysticks right after Pygame init
 
 try:
     pygame.mixer.init()
@@ -327,10 +327,10 @@ while running:
         # Joystick Hotplugging (re-initialize if a controller is added/removed)
         if ev.type == pygame.JOYDEVICEADDED or ev.type == pygame.JOYDEVICEREMOVED:
             initialize_joysticks()
-            
+
         # Initialize action type for combined keyboard/joystick logic
         action = None
-        
+
         # ----------------------------------------------------
         # 1. Keyboard Input: Map key code to action string
         # ----------------------------------------------------
@@ -339,66 +339,66 @@ while running:
             if ev.key == pygame.K_d:
                 debug_mode = not debug_mode
 
-            if ev.key == pygame.K_UP: 
+            if ev.key == pygame.K_UP:
                 action = "UP"
-            elif ev.key == pygame.K_DOWN: 
+            elif ev.key == pygame.K_DOWN:
                 action = "DOWN"
-            elif ev.key == pygame.K_LEFT: 
+            elif ev.key == pygame.K_LEFT:
                 action = "LEFT"
-            elif ev.key == pygame.K_RIGHT: 
+            elif ev.key == pygame.K_RIGHT:
                 action = "RIGHT"
-            elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER): 
+            elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
                 action = "ENTER"
-            elif ev.key == pygame.K_ESCAPE: 
-                action = "PAUSE" # Use PAUSE for ESC functionality
-            elif ev.key == pygame.K_r: 
+            elif ev.key == pygame.K_ESCAPE:
+                action = "PAUSE"  # Use PAUSE for ESC functionality
+            elif ev.key == pygame.K_r:
                 action = "RETRY"
-            elif ev.key == pygame.K_m: 
+            elif ev.key == pygame.K_m:
                 action = "MENU_QUIT"
 
         # ----------------------------------------------------
         # 2. Controller Input: Map joystick events to action string
         # ----------------------------------------------------
         elif ev.type == pygame.JOYAXISMOTION:
-            if ev.instance_id < len(JOOYSTICKS): 
-                if ev.axis == 0: # X-Axis
-                    if ev.value < -AXIS_DEADZONE: 
+            if ev.instance_id < len(JOOYSTICKS):
+                if ev.axis == 0:  # X-Axis
+                    if ev.value < -AXIS_DEADZONE:
                         action = "LEFT"
-                    elif ev.value > AXIS_DEADZONE: 
+                    elif ev.value > AXIS_DEADZONE:
                         action = "RIGHT"
-                elif ev.axis == 1: # Y-Axis
-                    if ev.value < -AXIS_DEADZONE: 
+                elif ev.axis == 1:  # Y-Axis
+                    if ev.value < -AXIS_DEADZONE:
                         action = "UP"
-                    elif ev.value > AXIS_DEADZONE: 
+                    elif ev.value > AXIS_DEADZONE:
                         action = "DOWN"
-        
+
         elif ev.type == pygame.JOYHATMOTION:
-             if ev.hat == 0:
-                 x, y = ev.value
-                 if x == -1: 
-                     action = "LEFT"
-                 elif x == 1: 
-                     action = "RIGHT"
-                 elif y == -1: 
-                     action = "DOWN"
-                 elif y == 1: 
-                     action = "UP"
+            if ev.hat == 0:
+                x, y = ev.value
+                if x == -1:
+                    action = "LEFT"
+                elif x == 1:
+                    action = "RIGHT"
+                elif y == -1:
+                    action = "DOWN"
+                elif y == 1:
+                    action = "UP"
 
         elif ev.type == pygame.JOYBUTTONDOWN:
-            if ev.button == BUTTON_ENTER: 
+            if ev.button == BUTTON_ENTER:
                 action = "ENTER"
-            elif ev.button == BUTTON_BACK: 
-                action = "PAUSE" # Circle/B button for back
-            elif ev.button == BUTTON_PAUSE: 
+            elif ev.button == BUTTON_BACK:
+                action = "PAUSE"  # Circle/B button for back
+            elif ev.button == BUTTON_PAUSE:
                 action = "PAUSE"
-            
+
         # ----------------------------------------------------
         # 3. Process the universal action
         # ----------------------------------------------------
         if action:
             # Update the debug display variable
             last_input_action = action
-            
+
             # universal escape / pause logic
             # This handles ESCAPE/PAUSE/BACK buttons returning to menu from Settings/Game Over
             if action == "PAUSE" and state != "playing":
@@ -459,9 +459,20 @@ while running:
                         snd_select.play()
                 elif action in ("LEFT", "RIGHT", "ENTER"):
                     key, _ = settings_items[settings_index]
-                    
+
                     # For toggles, LEFT/RIGHT/ENTER all act as a toggle
-                    if key in ("vsync", "bloom", "use_kawase", "shake_on_death", "fullscreen", "chroma_enabled") and action == "ENTER":
+                    if (
+                        key
+                        in (
+                            "vsync",
+                            "bloom",
+                            "use_kawase",
+                            "shake_on_death",
+                            "fullscreen",
+                            "chroma_enabled",
+                        )
+                        and action == "ENTER"
+                    ):
                         settings[key] = not settings[key]
                         if key in ("vsync", "fullscreen"):
                             apply_display_mode(
@@ -470,12 +481,12 @@ while running:
                                 settings["vsync"],
                             )
                         save_settings(settings)
-                        
+
                     elif key == "color_theme":
                         current_index = THEME_NAMES.index(settings[key])
                         if action == "LEFT":
                             new_index = (current_index - 1) % len(THEME_NAMES)
-                        else: # RIGHT or ENTER
+                        else:  # RIGHT or ENTER
                             new_index = (current_index + 1) % len(THEME_NAMES)
                         settings[key] = THEME_NAMES[new_index]
                         save_settings(settings)
@@ -483,7 +494,7 @@ while running:
                     elif key == "resolution":
                         if action == "LEFT":
                             resolution_index = (resolution_index - 1) % len(RESOLUTIONS)
-                        else: # RIGHT or ENTER
+                        else:  # RIGHT or ENTER
                             resolution_index = (resolution_index + 1) % len(RESOLUTIONS)
                         new_res = RESOLUTIONS[resolution_index]
                         settings["resolution"] = new_res
@@ -511,10 +522,9 @@ while running:
                             settings[key] = min(
                                 2.0, cur + step
                             )  # clamp to 2.0 for biases
-                        elif action == "ENTER": # Reset to default on ENTER
+                        elif action == "ENTER":  # Reset to default on ENTER
                             settings[key] = DEFAULT_SETTINGS[key]
                         save_settings(settings)
-
 
             # -----------------
             # PLAYING INPUT
@@ -529,7 +539,7 @@ while running:
                 elif action == "RIGHT":
                     snake.change_dir((1, 0))
                 elif action == "PAUSE":
-                    state = "menu" # ESC/PAUSE/BACK button leads to menu
+                    state = "menu"  # ESC/PAUSE/BACK button leads to menu
 
             # -----------------
             # GAME OVER INPUT
@@ -553,7 +563,6 @@ while running:
                 elif action == "MENU_QUIT" or action == "PAUSE":
                     snake.reset()
                     state = "menu"
-
 
     # -----------------------
     # PREVIEW SNAKE LOGIC + AI MOVEMENT TOWARDS APPLE
@@ -800,34 +809,28 @@ while running:
             )
 
     # -----------------------
-    # DEBUG OVERLAY RENDER (NEW)
+    # DEBUG OVERLAY RENDER
     # -----------------------
     if debug_mode:
         debug_size = 20
         pos_x = 20
         # Position in the bottom left
-        pos_y = screen_h - 40 
-        
+        pos_y = screen_h - 40
+
         # Display current game state
         mode_text = f"MODE: {state.upper()}"
         renderer.draw_text(
-            mode_text,
-            debug_size,
-            color=(255, 255, 255),
-            pos=(pos_x, pos_y - 25)
+            mode_text, debug_size, color=(255, 255, 255), pos=(pos_x, pos_y - 25)
         )
 
         # Display last action
         debug_text = f"LAST ACTION: {last_input_action}"
         renderer.draw_text(
-            debug_text,
-            debug_size,
-            color=(255, 255, 255),
-            pos=(pos_x, pos_y)
+            debug_text, debug_size, color=(255, 255, 255), pos=(pos_x, pos_y)
         )
-        
+
     # ---------------------------------
-    
+
     # -----------------------
     # BLOOM + PRESENT
     # -----------------------
