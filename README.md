@@ -16,6 +16,16 @@ Snake Shader is a modern take on the classic Snake game, built using **Pygame** 
 - **Fluid Gameplay:** Utilizes a fixed time-step game loop for reliable physics and smooth rendering.
 - **Font:** Uses a `PixelifySans` TTF font for a unique UI look and feel.
 
+## 📷 Screenshots
+<details>
+<summary>View Screenshots</summary>
+
+| Main Menu | Settings Menu | Gameplay Scene |
+|:---:|:---:|:---:|
+| ![Main Menu](images/MainMenu.png) | ![Settings Menu](images/SettingsMenu.png) | ![Gameplay Scene](images/GameplayScene.png) |
+
+</details>
+
 ## 🚀 Getting Started
 
 To run Snake Shader, you need Python and the required libraries (Pygame, ModernGL, etc.). It's strongly recommended to use a virtual environment.
