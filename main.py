@@ -56,7 +56,7 @@ CELL_PADDING = 0.05
 TICK = 0.16
 
 pygame.init()
-initialize_joysticks()  # --- NEW: Initialize joysticks right after Pygame init
+initialize_joysticks()
 
 try:
     pygame.mixer.init()
@@ -109,7 +109,7 @@ snake = Snake(GRID_W, GRID_H)
 preview_snake = Snake(GRID_W, GRID_H)
 
 global acc, is_transitioning
-global last_input_action
+global last_input_action, last_input_source
 global debug_mode
 clock = pygame.time.Clock()
 acc = 0.0
@@ -120,8 +120,8 @@ is_transitioning = False
 state = "menu"  # menu, settings, playing, gameover
 fullscreen = False
 debug_mode = False
-last_input_action = "None"
-
+last_input_action = "None" # Stores the last universal action (UP, DOWN, ENTER, etc.)
+last_input_source = "None" # Stores the source of the last action (KEYBOARD, CONTROLLER)
 
 # -----------------------
 # SETTINGS + PERSISTENCE
@@ -330,6 +330,7 @@ while running:
 
         # Initialize action type for combined keyboard/joystick logic
         action = None
+        source = None
 
         # ----------------------------------------------------
         # 1. Keyboard Input: Map key code to action string
@@ -341,20 +342,28 @@ while running:
 
             if ev.key == pygame.K_UP:
                 action = "UP"
+                source = "KEYBOARD"
             elif ev.key == pygame.K_DOWN:
                 action = "DOWN"
+                source = "KEYBOARD"
             elif ev.key == pygame.K_LEFT:
                 action = "LEFT"
+                source = "KEYBOARD"
             elif ev.key == pygame.K_RIGHT:
                 action = "RIGHT"
+                source = "KEYBOARD"
             elif ev.key in (pygame.K_RETURN, pygame.K_KP_ENTER):
-                action = "ENTER"
+                action = "ENTER" 
+                source = "KEYBOARD"
             elif ev.key == pygame.K_ESCAPE:
                 action = "PAUSE"  # Use PAUSE for ESC functionality
+                source = "KEYBOARD"
             elif ev.key == pygame.K_r:
                 action = "RETRY"
+                source = "KEYBOARD"
             elif ev.key == pygame.K_m:
                 action = "MENU_QUIT"
+                source = "KEYBOARD"
 
         # ----------------------------------------------------
         # 2. Controller Input: Map joystick events to action string
@@ -364,33 +373,44 @@ while running:
                 if ev.axis == 0:  # X-Axis
                     if ev.value < -AXIS_DEADZONE:
                         action = "LEFT"
+                        source = "CONTROLLER"
                     elif ev.value > AXIS_DEADZONE:
                         action = "RIGHT"
+                        source = "CONTROLLER"
                 elif ev.axis == 1:  # Y-Axis
                     if ev.value < -AXIS_DEADZONE:
                         action = "UP"
+                        source = "CONTROLLER"
                     elif ev.value > AXIS_DEADZONE:
                         action = "DOWN"
+                        source = "CONTROLLER"
 
         elif ev.type == pygame.JOYHATMOTION:
             if ev.hat == 0:
                 x, y = ev.value
                 if x == -1:
                     action = "LEFT"
+                    source = "CONTROLLER"
                 elif x == 1:
                     action = "RIGHT"
+                    source = "CONTROLLER"
                 elif y == -1:
                     action = "DOWN"
+                    source = "CONTROLLER"
                 elif y == 1:
                     action = "UP"
+                    source = "CONTROLLER"
 
         elif ev.type == pygame.JOYBUTTONDOWN:
             if ev.button == BUTTON_ENTER:
                 action = "ENTER"
+                source = "CONTROLLER"
             elif ev.button == BUTTON_BACK:
                 action = "PAUSE"  # Circle/B button for back
+                source = "CONTROLLER"
             elif ev.button == BUTTON_PAUSE:
                 action = "PAUSE"
+                source = "CONTROLLER"
 
         # ----------------------------------------------------
         # 3. Process the universal action
@@ -398,6 +418,7 @@ while running:
         if action:
             # Update the debug display variable
             last_input_action = action
+            last_input_source = source
 
             # universal escape / pause logic
             # This handles ESCAPE/PAUSE/BACK buttons returning to menu from Settings/Game Over
@@ -820,7 +841,16 @@ while running:
         # Display current game state
         mode_text = f"MODE: {state.upper()}"
         renderer.draw_text(
-            mode_text, debug_size, color=(255, 255, 255), pos=(pos_x, pos_y - 25)
+            mode_text, debug_size, color=(255, 255, 255), pos=(pos_x, pos_y - 50)
+        )
+
+        # Display input source 
+        source_text = f"SOURCE: {last_input_source}"
+        renderer.draw_text(
+            source_text,
+            debug_size,
+            color=(255, 255, 255),
+            pos=(pos_x, pos_y - 25)
         )
 
         # Display last action
