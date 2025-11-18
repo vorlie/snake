@@ -75,4 +75,4 @@ Check out the **Settings** menu to tweak the experience:
 - **Effects**: Adjust Bloom intensity and Chromatic Aberration levels to your liking.
 
 ---
-*Built with ❤️, Python, and a lot of shaders.*
+Built with ❤️, Python, and a lot of shaders.
