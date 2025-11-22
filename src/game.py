@@ -67,3 +67,15 @@ class Snake:
 
     def positions(self):
         return list(self.segments)
+
+    def to_dict(self):
+        return {
+            "segments": self.segments,
+            "direction": self.direction,
+            "apple": self.apple,
+        }
+
+    def from_dict(self, data):
+        self.segments = [tuple(p) for p in data["segments"]]
+        self.direction = tuple(data["direction"])
+        self.apple = tuple(data["apple"])

@@ -1,5 +1,6 @@
 import sys
 import math
+import json
 import random
 import pygame
 import moderngl
@@ -32,7 +33,6 @@ class SnakeGameApp:
         self.preview_acc = 0.0
         
         # Game State
-        self.state = "menu"
         self.debug_mode = False
         
         # Effects
@@ -43,9 +43,23 @@ class SnakeGameApp:
         self.CHROMA_SPIKE_DURATION = 0.5
         self.MAX_CHROMA_SPIKE = 0.15
         
-        # Menu
+        # Game Objects
+        self.snake = Snake(GRID_W, GRID_H)
+        self.preview_snake = Snake(GRID_W, GRID_H)
+        
+        self.save_file = Path(__file__).resolve().parent.parent / "savegame.json"
+        self.has_save = self.save_file.exists()
+
+        # State
+        self.state = "menu"  # menu, settings, playing, gameover, win, paused
         self.menu_items = ["Start Game", "Settings", "Fullscreen", "Quit"]
+        if self.has_save:
+            self.menu_items.insert(0, "Continue")
+            
         self.menu_index = 0
+        
+        self.pause_items = ["Resume", "Save & Quit", "Quit"]
+        self.pause_index = 0
         
         self.settings_items = [
             ("shake_on_death", "Shake on Death"),
@@ -76,6 +90,7 @@ class SnakeGameApp:
 
         # Initialize Display & Renderer
         self.init_display()
+        self.apply_settings_to_renderer()
         
         # Game Objects
         self.snake = Snake(GRID_W, GRID_H)
@@ -83,6 +98,30 @@ class SnakeGameApp:
         
         # Start Music
         self.audio_manager.play_music()
+
+    def save_game(self):
+        data = {
+            "snake": self.snake.to_dict(),
+            "score": len(self.snake.segments) - 1,
+        }
+        try:
+            with open(self.save_file, "w") as f:
+                json.dump(data, f)
+            self.has_save = True
+            if "Continue" not in self.menu_items:
+                self.menu_items.insert(0, "Continue")
+        except Exception as e:
+            print(f"Error saving game: {e}")
+
+    def load_game(self):
+        try:
+            with open(self.save_file, "r") as f:
+                data = json.load(f)
+            self.snake.from_dict(data["snake"])
+            return True
+        except Exception as e:
+            print(f"Error loading game: {e}")
+            return False
 
     def init_display(self):
         flags = pygame.OPENGL | pygame.DOUBLEBUF
@@ -131,6 +170,16 @@ class SnakeGameApp:
         pygame.quit()
         sys.exit()
 
+    def apply_settings_to_renderer(self):
+        """Pushes current settings values to the renderer."""
+        self.renderer.bloom_enabled = self.settings["bloom"]
+        self.renderer.use_kawase = self.settings["use_kawase"]
+        self.renderer.bloom_strength = self.settings["bloom_strength"]
+        self.renderer.bloom_radius = self.settings["bloom_radius"]
+        self.renderer.chroma_enabled = self.settings["chroma_enabled"]
+        self.renderer.chroma_amount = self.settings["chroma_amount"]
+        self.renderer.chroma_bias = self.settings["chroma_bias"]
+
     def handle_input(self):
         for ev in pygame.event.get():
             if ev.type == pygame.QUIT:
@@ -167,6 +216,8 @@ class SnakeGameApp:
             self.handle_gameover_input(action)
         elif self.state == "win":
             self.handle_win_input(action)
+        elif self.state == "paused":
+            self.handle_paused_input(action)
 
     def handle_menu_input(self, action):
         if action == "UP":
@@ -177,7 +228,17 @@ class SnakeGameApp:
             self.audio_manager.play_sound("select")
         elif action == "ENTER":
             choice = self.menu_items[self.menu_index]
-            if choice == "Start Game":
+            if choice == "Continue":
+                # Assuming self.load_game() is a method that loads the game state
+                # and returns True on success, False otherwise.
+                # This method is not defined in the provided context,
+                # so it would need to be implemented elsewhere.
+                if self.load_game():
+                    self.state = "playing"
+                    self.acc = 0.0
+                    self.is_transitioning = True
+                    self.audio_manager.play_sound("start")
+            elif choice == "Start Game":
                 self.snake.reset()
                 self.state = "playing"
                 self.acc = 0.0
@@ -203,7 +264,7 @@ class SnakeGameApp:
             key, _ = self.settings_items[self.settings_index]
             
             # Toggles
-            if key in ("vsync", "bloom", "use_kawase", "shake_on_death", "fullscreen", "chroma_enabled") and action == "ENTER":
+            if key in ("vsync", "bloom", "use_kawase", "shake_on_death", "fullscreen", "chroma_enabled", "crt_enabled") and action == "ENTER":
                 self.settings[key] = not self.settings[key]
                 if key in ("vsync", "fullscreen"):
                     self.apply_display_mode()
@@ -231,10 +292,21 @@ class SnakeGameApp:
                 save_settings(self.settings)
                 
             # Sliders
-            elif key in ("bloom_strength", "bloom_radius", "chroma_amount", "chroma_bias"):
+            elif key in (
+                "bloom_strength",
+                "bloom_radius",
+                "chroma_amount",
+                "chroma_bias",
+                "crt_curvature",
+                "crt_vignette",
+            ):
                 step = 0.02
-                if key == "bloom_radius": step = 0.1
-                elif key == "chroma_bias": step = 0.05
+                if key == "bloom_radius":
+                    step = 0.1
+                elif key == "chroma_bias":
+                    step = 0.05
+                elif key == "crt_vignette":
+                    step = 0.05
                 
                 cur = self.settings[key]
                 if action == "LEFT":
@@ -250,7 +322,10 @@ class SnakeGameApp:
         elif action == "DOWN": self.snake.change_dir((0, 1))
         elif action == "LEFT": self.snake.change_dir((-1, 0))
         elif action == "RIGHT": self.snake.change_dir((1, 0))
-        elif action == "PAUSE": self.state = "menu"
+        elif action == "RIGHT": self.snake.change_dir((1, 0))
+        elif action == "PAUSE":
+            self.state = "paused"
+            self.pause_index = 0
 
     def handle_gameover_input(self, action):
         if action == "RETRY" or action == "ENTER":
@@ -269,6 +344,27 @@ class SnakeGameApp:
         elif action == "MENU_QUIT" or action == "PAUSE":
             self.snake.reset()
             self.state = "menu"
+
+    def handle_paused_input(self, action):
+        if action == "UP":
+            self.pause_index = (self.pause_index - 1) % len(self.pause_items)
+            self.audio_manager.play_sound("select")
+        elif action == "DOWN":
+            self.pause_index = (self.pause_index + 1) % len(self.pause_items)
+            self.audio_manager.play_sound("select")
+        elif action == "ENTER":
+            choice = self.pause_items[self.pause_index]
+            if choice == "Resume":
+                self.state = "playing"
+            elif choice == "Save & Quit":
+                self.save_game()
+                self.snake.reset()
+                self.state = "menu"
+            elif choice == "Quit":
+                self.snake.reset()
+                self.state = "menu"
+        elif action == "PAUSE":
+            self.state = "playing"
 
     def update(self):
         # Preview Snake Logic
@@ -351,12 +447,12 @@ class SnakeGameApp:
             self.render_menu(screen_w, screen_h, title_col, current_theme)
         elif self.state == "settings":
             self.render_settings(screen_w, screen_h, current_theme)
+        elif self.state == "paused":
+            self.render_gameplay(snake_col, apple_col, border_col)
+            self.render_pause(screen_w, screen_h)
         else:
             self.render_gameplay(snake_col, apple_col, border_col)
-            pass
 
-        if self.state not in ("menu", "settings"):
-             self.render_gameplay(snake_col, apple_col, border_col)
 
         # Debug Overlay
         if self.debug_mode:
@@ -463,6 +559,27 @@ class SnakeGameApp:
                 color=to_byte_color(menu_text_selected_col) if selected else to_byte_color(menu_text_col),
                 pos=((screen_w - w) // 2, base_y + idx * 50),
             )
+
+    def render_pause(self, screen_w, screen_h):
+        # Draw a semi-transparent overlay
+        self.renderer.draw_rect((0, 0), (screen_w, screen_h), color=(0, 0, 0, 0.5))
+        
+        title = "PAUSED"
+        tw = self.renderer.text_width(title, 72)
+        vertical_offset = (screen_h - 400) // 2
+        self.renderer.draw_text(title, 72, pos=((screen_w - tw) // 2, vertical_offset))
+        
+        base_y = vertical_offset + 150
+        for i, item in enumerate(self.pause_items):
+            selected = i == self.pause_index
+            size = 32
+            text_w = self.renderer.text_width(item, size)
+            
+            color = (255, 255, 255) if selected else (150, 150, 150)
+            if selected:
+                self.renderer.draw_text(f"> {item} <", size, color=color, pos=((screen_w - self.renderer.text_width(f"> {item} <", size)) // 2, base_y + i * 60))
+            else:
+                self.renderer.draw_text(item, size, color=color, pos=((screen_w - text_w) // 2, base_y + i * 60))
 
     def render_gameplay(self, snake_col, apple_col, border_col):
         self.renderer.draw_border(2, color=(0.08, 0.08, 0.08, 1.0))
