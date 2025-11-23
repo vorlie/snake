@@ -52,7 +52,7 @@ class SnakeGameApp:
 
         # State
         self.state = "menu"  # menu, settings, playing, gameover, win, paused
-        self.menu_items = ["Start Game", "Settings", "Fullscreen", "Quit"]
+        self.menu_items = ["Start Game", "Game Mode: Classic", "Settings", "Fullscreen", "Quit"]
         if self.has_save:
             self.menu_items.insert(0, "Continue")
             
@@ -107,6 +107,7 @@ class SnakeGameApp:
         data = {
             "snake": self.snake.to_dict(),
             "score": len(self.snake.segments) - 1,
+            "mode": self.settings["game_mode"],
         }
         try:
             with open(self.save_file, "w") as f:
@@ -121,7 +122,10 @@ class SnakeGameApp:
         try:
             with open(self.save_file, "r") as f:
                 data = json.load(f)
+            self.settings["game_mode"] = data.get("mode", "Classic")
+            self.snake = Snake(GRID_W, GRID_H, mode=self.settings["game_mode"])
             self.snake.from_dict(data["snake"])
+            self.update_menu_text()
             return True
         except Exception as e:
             print(f"Error loading game: {e}")
@@ -133,7 +137,7 @@ class SnakeGameApp:
             flags |= pygame.FULLSCREEN
             
         self.screen = pygame.display.set_mode(self.settings["resolution"], flags)
-        pygame.display.set_caption("Snake Shader v1.1.2")
+        pygame.display.set_caption("Snake Shader v1.2.0")
         
         self.ctx = moderngl.create_context()
         self.ctx.enable(moderngl.BLEND)
@@ -146,6 +150,15 @@ class SnakeGameApp:
         self.renderer = Renderer(
             self.ctx, GRID_W, GRID_H, CELL_PADDING, screen_size=self.settings["resolution"]
         )
+        self.update_menu_text()
+
+    def update_menu_text(self):
+        # Update the Game Mode text in menu items
+        mode = self.settings["game_mode"]
+        for i, item in enumerate(self.menu_items):
+            if item.startswith("Game Mode:"):
+                self.menu_items[i] = f"Game Mode: {mode}"
+                break
 
     def apply_display_mode(self):
         # Re-initialize display with new settings
@@ -243,11 +256,21 @@ class SnakeGameApp:
                     self.is_transitioning = True
                     self.audio_manager.play_sound("start")
             elif choice == "Start Game":
+                self.snake = Snake(GRID_W, GRID_H, mode=self.settings["game_mode"])
                 self.snake.reset()
                 self.state = "playing"
                 self.acc = 0.0
                 self.is_transitioning = True
                 self.audio_manager.play_sound("start")
+            elif choice.startswith("Game Mode:"):
+                modes = ["Classic", "Arcade"]
+                current = self.settings["game_mode"]
+                idx = modes.index(current)
+                new_mode = modes[(idx + 1) % len(modes)]
+                self.settings["game_mode"] = new_mode
+                self.update_menu_text()
+                save_settings(self.settings)
+                self.audio_manager.play_sound("select")
             elif choice == "Settings":
                 self.state = "settings"
             elif choice == "Fullscreen":
@@ -602,7 +625,18 @@ class SnakeGameApp:
         if self.state == "gameover" and self.shake_timer > 0:
             shake = 0.2 * (self.shake_timer / self.shake_duration)
             
+        current_theme = THEME_COLORS[self.settings["color_theme"]]
+        snake_col = current_theme["snake"]
+        apple_col = current_theme["apple"]
+        border_col = current_theme["border"]
+        obstacle_col = current_theme["obstacle"]
+        
+        shake = 0.0
+        if self.state == "gameover" and self.shake_timer > 0:
+            shake = 0.2 * (self.shake_timer / self.shake_duration)
+            
         self.renderer.draw_snake(self.snake.positions(), color=snake_col, shake=shake)
+        self.renderer.draw_obstacles(self.snake.obstacles, color=obstacle_col)
         self.renderer.draw_apple(self.snake.apple, color=apple_col, shake=shake)
         
         score = max(0, len(self.snake.positions()) - 1)

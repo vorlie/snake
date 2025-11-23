@@ -31,6 +31,7 @@ THEME_COLORS = {
         "menu_text": (0.7, 0.7, 0.7, 1.0),
         "menu_text_selected": (1.0, 0.96, 0.51, 1.0),
         "menu_highlight_rect": (1.0, 0.9, 0.6, 0.15),
+        "obstacle": (0.2, 0.4, 0.2, 1.0),
     },
     "Cyberpunk": {
         "snake": (0.0, 0.8, 0.8, 1.0),
@@ -40,6 +41,7 @@ THEME_COLORS = {
         "menu_text": (0.0, 0.8, 0.8, 1.0),
         "menu_text_selected": (1.0, 0.0, 0.9, 1.0),
         "menu_highlight_rect": (1.0, 0.0, 0.9, 0.25),
+        "obstacle": (1.0, 0.0, 0.2, 0.8),
     },
     "Monochrome": {
         "snake": (0.7, 0.7, 0.7, 1.0),
@@ -49,9 +51,22 @@ THEME_COLORS = {
         "menu_text": (0.5, 0.5, 0.5, 1.0),
         "menu_text_selected": (1.0, 1.0, 1.0, 1.0),
         "menu_highlight_rect": (1.0, 1.0, 1.0, 0.15),
+        "obstacle": (0.5, 0.5, 0.5, 1.0),
+    },
+    "Retro": {
+        "snake": (0.0, 1.0, 0.0, 1.0),
+        "apple": (1.0, 0.0, 0.0, 1.0),
+        "border": (0.0, 1.0, 0.0, 1.0),
+        "title": (0.0, 1.0, 0.0, 1.0),
+        "menu_text": (0.8, 0.8, 0.8, 1.0),
+        "menu_text_selected": (1.0, 1.0, 1.0, 1.0),
+        "menu_highlight_rect": (0.0, 0.5, 0.0, 0.5),
+        "obstacle": (0.0, 0.5, 0.0, 1.0),
     },
 }
 THEME_NAMES = list(THEME_COLORS.keys())
+
+GAME_MODES = ["Classic", "Arcade"]
 
 # -----------------------
 # SETTINGS
@@ -68,6 +83,7 @@ DEFAULT_SETTINGS = {
     "fullscreen": False,
     "music_volume": 0.5,
     "sfx_volume": 0.5,
+    "game_mode": "Classic",
     "resolution": list(RESOLUTIONS[0]),
     "chroma_enabled": True,
     "chroma_amount": 0.02,

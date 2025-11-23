@@ -10,7 +10,19 @@ Most Snake games just move a square on a screen. This one uses:
 - **Custom Shaders**: Everything you see is rendered via OpenGL shaders.
 - **Post-Processing**: I've added Bloom (glow), Chromatic Aberration (retro glitch), and Vignette effects.
 - **Dynamic Audio**: Sound effects and background music that fit the vibe.
+- **Dynamic Audio**: Sound effects and background music that fit the vibe.
 - **Controller Support**: Play with your keyboard or your favorite gamepad.
+
+## 🕹️ Game Modes
+
+- **Classic**: The traditional Snake experience. Eat apples, grow long, don't crash.
+- **Arcade**: A chaotic twist! Every 3 apples you eat spawns a permanent wall obstacle. Watch out, the board gets crowded fast.
+
+## ✨ Features
+
+- **Pause & Save**: Need a break? Pause the game and save your progress. Resume right where you left off, even after closing the game.
+- **Themed Obstacles**: In Arcade Mode, obstacles change color to match your selected theme (e.g., Neon Red-ish/Pink-ish for Cyberpunk).
+- **Volume Control**: Fine-tune Music and SFX volume in the settings.
 
 ## 🛠️ Under the Hood
 
@@ -71,7 +83,8 @@ You'll need **Python 3.13+**. I recommend using a virtual environment.
 ## ⚙️ Customization
 
 Check out the **Settings** menu to tweak the experience:
-- **Themes**: Switch between "Classic Green", "Cyberpunk", and "Monochrome".
+- **Themes**: Switch between "Classic Green", "Cyberpunk", "Monochrome", and "Retro".
+- **Audio**: Adjust Music and SFX volume percentages.
 - **Graphics**: Toggle Bloom, V-Sync, and Fullscreen.
 - **Effects**: Adjust Bloom intensity and Chromatic Aberration levels to your liking.
 

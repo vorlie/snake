@@ -385,6 +385,32 @@ class Renderer:
         )
         self.bloom_objects.append((apple[0], apple[1], bloom_col))
 
+        self.bloom_objects.append((apple[0], apple[1], bloom_col))
+
+    def draw_obstacles(
+        self,
+        obstacles: List[Tuple[int, int]],
+        color: Tuple[float, float, float, float],
+    ):
+        if not obstacles:
+            return
+        
+        self.write_instances(list(obstacles))
+        if "u_color" in self.prog:
+            self.prog["u_color"].value = color
+        self.vao.render(mode=moderngl.TRIANGLES, instances=len(obstacles))
+        
+        # Obstacles also bloom
+        BLOOM_GAIN = self.bloom_gain
+        bloom_col = (
+            color[0] * BLOOM_GAIN,
+            color[1] * BLOOM_GAIN,
+            color[2] * BLOOM_GAIN,
+            1.0,
+        )
+        for x, y in obstacles:
+            self.bloom_objects.append((x, y, bloom_col))
+
     # ------------------------------
     # The combined present() with brightpass + kawase/gaussian + composite
     # ------------------------------
